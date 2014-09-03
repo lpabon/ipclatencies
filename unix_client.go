@@ -66,30 +66,3 @@ func main() {
 
 	wg.Wait()
 }
-
-/*
-func main() {
-
-	c, _ := net.Dial("unix", "go.sock")
-	defer c.Close()
-
-	buf := make([]byte, 8)
-	var td utils.TimeDuration
-
-	for i := 0; i < 100000; i++ {
-
-		start := time.Now()
-
-		c.Write(buf)
-		c.Read(buf)
-
-		end := time.Now()
-		td.Add(end.Sub(start))
-		time.Sleep(time.Microsecond * 10)
-
-	}
-
-	fmt.Printf("\n%d:Latency %.4f usecs\n", 0, td.MeanTimeUsecs())
-
-}
-*/
