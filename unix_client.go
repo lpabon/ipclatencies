@@ -14,3 +14,82 @@
 // limitations under the License.
 
 package main
+
+import (
+	"fmt"
+	"github.com/lpabon/foocsim/utils"
+	"net"
+	"sync"
+	"time"
+)
+
+func client(wg sync.WaitGroup, id int) {
+
+	defer wg.Done()
+
+	c, _ := net.Dial("unix", "go.sock")
+	defer c.Close()
+
+	buf := make([]byte, 8)
+	var td utils.TimeDuration
+	prev := td.Copy()
+
+	for i := 0; i < 100000000; i++ {
+
+		start := time.Now()
+
+		c.Write(buf)
+		c.Read(buf)
+
+		end := time.Now()
+		td.Add(end.Sub(start))
+
+		if (i % 10000) == 0 {
+			fmt.Printf("%d:%d: %.4f usecs\n", id, i, td.DeltaMeanTimeUsecs(prev))
+			prev = td.Copy()
+		}
+
+		time.Sleep(time.Microsecond * 10)
+	}
+
+	fmt.Printf("\n%d:Latency %.4f usecs\n", 0, td.MeanTimeUsecs())
+}
+
+func main() {
+
+	var wg sync.WaitGroup
+
+	for i := 0; i < 1; i++ {
+		go client(wg, i)
+		wg.Add(1)
+	}
+
+	wg.Wait()
+}
+
+/*
+func main() {
+
+	c, _ := net.Dial("unix", "go.sock")
+	defer c.Close()
+
+	buf := make([]byte, 8)
+	var td utils.TimeDuration
+
+	for i := 0; i < 100000; i++ {
+
+		start := time.Now()
+
+		c.Write(buf)
+		c.Read(buf)
+
+		end := time.Now()
+		td.Add(end.Sub(start))
+		time.Sleep(time.Microsecond * 10)
+
+	}
+
+	fmt.Printf("\n%d:Latency %.4f usecs\n", 0, td.MeanTimeUsecs())
+
+}
+*/

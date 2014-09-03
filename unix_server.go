@@ -16,29 +16,35 @@
 package main
 
 import (
+	"fmt"
 	"github.com/lpabon/godbc"
 	"net"
+	"os"
+	"time"
 )
 
 func echoServer(c net.Conn) {
+	defer c.Close()
+	buf := make([]byte, 512)
+	c.SetReadDeadline(time.Now().Add(time.Millisecond * 10))
 	for {
-		buf := make([]byte, 512)
 		nr, err := c.Read(buf)
+		if err != nil {
+			fmt.Printf("Closed: " + err.Error())
+			return
+		}
+		_, err = c.Write(buf[:nr])
 		if err != nil {
 			return
 		}
 
-		data := buf[0:nr]
-		println("Server got:", string(data))
-		_, err = c.Write(data)
-		if err != nil {
-			panic("Write: " + err.String())
-		}
 	}
 }
 
 func main() {
 	l, err := net.Listen("unix", "go.sock")
+	defer l.Close()
+	defer os.Remove("go.sock")
 	godbc.Check(err == nil)
 
 	for {
