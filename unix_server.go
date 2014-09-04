@@ -26,15 +26,17 @@ import (
 func echoServer(c net.Conn) {
 	defer c.Close()
 	buf := make([]byte, 512)
-	c.SetReadDeadline(time.Now().Add(time.Millisecond * 10))
+	c.SetReadDeadline(time.Now())
 	for {
 		nr, err := c.Read(buf)
 		if err != nil {
-			fmt.Printf("Closed: " + err.Error())
+			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
+		c.SetWriteDeadline(time.Now().Add(time.Second * 10))
 		_, err = c.Write(buf[:nr])
 		if err != nil {
+			fmt.Printf("W:Closed: %s\n", err.Error())
 			return
 		}
 
@@ -42,15 +44,20 @@ func echoServer(c net.Conn) {
 }
 
 func main() {
+	os.Remove("go.sock")
 	l, err := net.Listen("unix", "go.sock")
+	godbc.Check(err == nil)
+
 	defer l.Close()
 	defer os.Remove("go.sock")
-	godbc.Check(err == nil)
 
 	for {
 		fd, err := l.Accept()
-		godbc.Check(err == nil)
-
-		go echoServer(fd)
+		if err == nil {
+			go echoServer(fd)
+		} else {
+			fmt.Printf("Error: %s\n", err.Error())
+			break
+		}
 	}
 }

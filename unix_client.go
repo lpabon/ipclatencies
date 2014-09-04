@@ -23,18 +23,17 @@ import (
 	"time"
 )
 
-func client(wg sync.WaitGroup, id int) {
+func client(c net.Conn, wg *sync.WaitGroup, id int) {
 
 	defer wg.Done()
 
-	c, _ := net.Dial("unix", "go.sock")
 	defer c.Close()
 
 	buf := make([]byte, 8)
 	var td utils.TimeDuration
 	prev := td.Copy()
 
-	for i := 0; i < 100000000; i++ {
+	for i := 0; i < 100000; i++ {
 
 		start := time.Now()
 
@@ -52,16 +51,24 @@ func client(wg sync.WaitGroup, id int) {
 		time.Sleep(time.Microsecond * 10)
 	}
 
-	fmt.Printf("\n%d:Latency %.4f usecs\n", 0, td.MeanTimeUsecs())
+	fmt.Printf("%d:Latency %.4f usecs\n", id, td.MeanTimeUsecs())
 }
 
 func main() {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 1; i++ {
-		go client(wg, i)
+	for i := 0; i < 2; i++ {
+
+		c, err := net.Dial("unix", "go.sock")
+		if err != nil {
+			fmt.Printf("Last thread: %d\n", i)
+			fmt.Printf("%d: Error: %s\n", err.Error())
+			break
+		}
+
 		wg.Add(1)
+		go client(c, &wg, i)
 	}
 
 	wg.Wait()
