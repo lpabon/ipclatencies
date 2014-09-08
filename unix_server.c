@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 int server( int socket);
 
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
 
 int
 server( int socket) {
-    char buf[512];
+    char buf[4096];
     int len;
 
     while(1) {
@@ -78,6 +79,9 @@ server( int socket) {
             close(socket);
             return 0;
         }
+
+        /* Delay */
+        usleep(100);
 
         len = write(socket, buf, len);
         if (len < 0) {

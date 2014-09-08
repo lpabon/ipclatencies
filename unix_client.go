@@ -37,32 +37,19 @@ func client(c net.Conn, wg *sync.WaitGroup, id int) {
 
 		start := time.Now()
 
-		for errors := 0; ; errors++ {
-			_, err := c.Write(buf)
-			if err != nil {
-				fmt.Printf("%d: %d Error writing: %s\n", id, errors, err.Error())
-				if errors >= 10 {
-					return
-				}
-			} else {
-				break
-			}
+		_, err := c.Write(buf)
+		if err != nil {
+			fmt.Printf("%d: %d Error writing: %s\n", id, errors, err.Error())
+			return
 		}
 
-		for errors := 0; ; errors++ {
-			_, err := c.Read(buf)
-			if err != nil {
-				fmt.Printf("%d: Error writing: %s\n", id, err.Error())
-				if errors >= 10 {
-					return
-				}
-			} else {
-				break
-			}
+		_, err = c.Read(buf)
+		if err != nil {
+			fmt.Printf("%d: Error writing: %s\n", id, err.Error())
+			return
 		}
 
-		end := time.Now()
-		td.Add(end.Sub(start))
+		td.Add(time.Now().Sub(start))
 
 		if (i % 10000) == 0 {
 			fmt.Printf("%d:%d: %.4f usecs\n", id, i, td.DeltaMeanTimeUsecs(prev))

@@ -11,7 +11,7 @@ char *socket_path = "go.sock";
 int main(int argc, char *argv[]) {
   struct sockaddr_un addr;
   int fd,rc;
-  char buf[8];
+  char buf[4096];
   int len;
   int64_t d = 0;
   tm_ty ts, te;

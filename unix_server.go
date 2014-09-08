@@ -26,39 +26,23 @@ import (
 
 func echoServer(c net.Conn) {
 	defer c.Close()
-	buf := make([]byte, 512)
-	fmt.Print("Created connection\n")
+	buf := make([]byte, 4096)
 
 	for {
-		var nr int
-		var err error
 
-		c.SetDeadline(time.Now().Add(time.Second * 10))
-		for errors := 0; ; errors++ {
-			nr, err = c.Read(buf)
-			if err != nil {
-				fmt.Printf("R:Closed: %s\n", err.Error())
-				if errors >= 10 {
-					return
-				}
-			} else {
-				//fmt.Print("R")
-				break
-			}
+		//c.SetDeadline(time.Now().Add(time.Second * 10))
+		nr, err := c.Read(buf)
+		if err != nil {
+			fmt.Printf("R:Closed: %s\n", err.Error())
+			return
 		}
 
-		for errors := 0; ; errors++ {
-			_, err = c.Write(buf[:nr])
-			if err != nil {
-				fmt.Printf("W:Closed: %s\n", err.Error())
-				if errors >= 10 {
-					return
-				}
-				return
-			} else {
-				//fmt.Print("W")
-				break
-			}
+		time.Sleep(time.Microsecond * 100)
+
+		_, err = c.Write(buf[:nr])
+		if err != nil {
+			fmt.Printf("W:Closed: %s\n", err.Error())
+			return
 		}
 	}
 }
