@@ -1,5 +1,5 @@
 GCC = gcc
-all: cus cuc hwclient hwserver
+all: cus cuc hwclient hwserver ctt
 
 hwclient: Makefile hwclient.c tm.h
 	$(GCC) -O2 -o hwclient hwclient.c -lzmq
@@ -12,6 +12,9 @@ cus: Makefile unix_server.c tm.h
 
 cuc: Makefile unix_client.c tm.h
 	$(GCC) -O2 -o cuc unix_client.c
+
+ctt: Makefile tm.h timetrial.c
+	$(GCC) -O2 -o ctt timetrial.c
 
 clean:
 	rm -f hwclient hwserver cus cuc
