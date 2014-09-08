@@ -64,7 +64,7 @@ func echoServer(c net.Conn) {
 }
 
 func main() {
-	runtime.GOMAXPROCS(4)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	os.Remove("go.sock")
 	l, err := net.Listen("unix", "go.sock")
 	godbc.Check(err == nil)
