@@ -37,8 +37,29 @@ func client(c net.Conn, wg *sync.WaitGroup, id int) {
 
 		start := time.Now()
 
-		c.Write(buf)
-		c.Read(buf)
+		for errors := 0; ; errors++ {
+			_, err := c.Write(buf)
+			if err != nil {
+				fmt.Printf("%d: %d Error writing: %s\n", id, errors, err.Error())
+				if errors >= 10 {
+					return
+				}
+			} else {
+				break
+			}
+		}
+
+		for errors := 0; ; errors++ {
+			_, err := c.Read(buf)
+			if err != nil {
+				fmt.Printf("%d: Error writing: %s\n", id, err.Error())
+				if errors >= 10 {
+					return
+				}
+			} else {
+				break
+			}
+		}
 
 		end := time.Now()
 		td.Add(end.Sub(start))

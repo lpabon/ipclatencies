@@ -20,30 +20,51 @@ import (
 	"github.com/lpabon/godbc"
 	"net"
 	"os"
+	"runtime"
 	"time"
 )
 
 func echoServer(c net.Conn) {
 	defer c.Close()
 	buf := make([]byte, 512)
-	c.SetReadDeadline(time.Now())
+	fmt.Print("Created connection\n")
+
 	for {
-		nr, err := c.Read(buf)
-		if err != nil {
-			fmt.Printf("R:Closed: %s\n", err.Error())
-			return
-		}
-		c.SetWriteDeadline(time.Now().Add(time.Second * 10))
-		_, err = c.Write(buf[:nr])
-		if err != nil {
-			fmt.Printf("W:Closed: %s\n", err.Error())
-			return
+		var nr int
+		var err error
+
+		c.SetDeadline(time.Now().Add(time.Second * 10))
+		for errors := 0; ; errors++ {
+			nr, err = c.Read(buf)
+			if err != nil {
+				fmt.Printf("R:Closed: %s\n", err.Error())
+				if errors >= 10 {
+					return
+				}
+			} else {
+				//fmt.Print("R")
+				break
+			}
 		}
 
+		for errors := 0; ; errors++ {
+			_, err = c.Write(buf[:nr])
+			if err != nil {
+				fmt.Printf("W:Closed: %s\n", err.Error())
+				if errors >= 10 {
+					return
+				}
+				return
+			} else {
+				//fmt.Print("W")
+				break
+			}
+		}
 	}
 }
 
 func main() {
+	runtime.GOMAXPROCS(4)
 	os.Remove("go.sock")
 	l, err := net.Listen("unix", "go.sock")
 	godbc.Check(err == nil)
