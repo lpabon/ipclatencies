@@ -21,7 +21,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"time"
 )
 
 func echoServer(c net.Conn) {
@@ -31,15 +30,13 @@ func echoServer(c net.Conn) {
 	for {
 
 		//c.SetDeadline(time.Now().Add(time.Second * 10))
-		nr, err := c.Read(buf)
+		_, err := c.Read(buf)
 		if err != nil {
 			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
 
-		time.Sleep(time.Microsecond * 100)
-
-		_, err = c.Write(buf[:nr])
+		_, err = c.Write(buf)
 		if err != nil {
 			fmt.Printf("W:Closed: %s\n", err.Error())
 			return

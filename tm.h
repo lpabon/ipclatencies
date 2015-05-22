@@ -21,6 +21,22 @@
 
 #include <time.h>
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+
+#define CLOCK_MONOTONIC 0
+inline static void clock_gettime(int dummy, struct timespec *ts) {
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ts->tv_sec = mts.tv_sec;
+    ts->tv_nsec = mts.tv_nsec;
+}
+#endif
+
 #define TM_NOW(t)  clock_gettime(CLOCK_MONOTONIC, &(t)) 
 #define TM_DURATION_NSEC(te, ts) (((te).tv_sec-(ts).tv_sec)*(int64_t)1e9) + \
     ((te).tv_nsec-(ts).tv_nsec)

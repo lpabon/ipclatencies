@@ -3,6 +3,7 @@
 #include <sys/un.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 int server( int socket);
 
@@ -79,9 +80,6 @@ server( int socket) {
             close(socket);
             return 0;
         }
-
-        /* Delay */
-        usleep(100);
 
         len = write(socket, buf, len);
         if (len < 0) {

@@ -1,5 +1,5 @@
 GCC = gcc
-all: cus cuc hwclient hwserver ctt
+all: cus cuc ctt
 
 hwclient: Makefile hwclient.c tm.h
 	$(GCC) -O2 -o hwclient hwclient.c -lzmq

@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
       }
       TM_NOW(te);
 
-      d += TM_DURATION_NSEC(te, ts);
+      usleep(100);
 
-      usleep(10);
+      d += TM_DURATION_NSEC(te, ts);
   }
   printf("Latency: %lld ns\n", d/((int64_t)count));
 
