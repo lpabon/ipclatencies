@@ -10,6 +10,11 @@
 
 char *socket_path = "go.sock";
 
+#define T() do {\
+    printf("%s:%d:%s()\n", __FILE__, __LINE__, __func__);\
+    fflush(stdout);\
+}while(0)
+
 typedef struct {
     int socket;
     char buf[4096];
@@ -43,6 +48,7 @@ ch_init(channel_t *ch) {
 
 void
 ch_send(channel_t *ch, msg_t *msg) {
+
     pthread_mutex_lock(&ch->m);
     while (!ch->empty) {
         pthread_cond_wait(&ch->c, &ch->m);
@@ -84,7 +90,7 @@ worker(void *arg) {
         msg = ch_recv(&conn->workers); 
 
         /* Work */
-        usleep(1000000);
+        usleep(1);
 
         /* Send */
         ch_send(&conn->reply, msg);
