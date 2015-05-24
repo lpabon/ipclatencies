@@ -25,7 +25,7 @@ import (
 
 func echoServer(c net.Conn) {
 	defer c.Close()
-	buf := make([]byte, 4096)
+	buf := make([]byte, 8*4096)
 
 	for {
 

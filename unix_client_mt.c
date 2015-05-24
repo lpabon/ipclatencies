@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "tm.h"
 
 char *socket_path = "go.sock";
