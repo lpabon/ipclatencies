@@ -8,64 +8,10 @@
 #include <pthread.h>
 #include <sys/queue.h>
 
-int server( int socket);
-
 char *socket_path = "go.sock";
 
-int main(int argc, char *argv[]) {
-  struct sockaddr_un addr;
-  int fd, client, pid;
-
-  if (argc > 1) {
-    socket_path=argv[1];
-  }
-
-  if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    perror("socket error");
-    exit(-1);
-  }
-
-  memset(&addr, 0, sizeof(addr));
-  addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
-
-  unlink(socket_path);
-
-  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-    perror("bind error");
-    exit(-1);
-  }
-
-  if (listen(fd, 10) == -1) {
-    perror("listen error");
-    exit(-1);
-  }
-
-    while (1) {
-        if ( (client = accept(fd, NULL, NULL)) == -1) {
-          perror("accept error");
-          continue;
-        }
-        pid = fork();
-        if (0 == pid) {
-            /* child */
-            server(client);
-            exit(0);
-        } else if (pid < 0) {
-            /* parent */
-            close(client);
-            close(fd);
-            exit(-1);
-        } else {
-            close(client);
-        }
-      }
-
-
-  return 0;
-}
-
 typedef struct {
+    int socket;
     char buf[4096];
     int len;
 } msg_t;
@@ -78,10 +24,15 @@ typedef struct {
 } channel_t;
 
 typedef struct {
-    int socket;
     channel_t workers;
     channel_t reply;
 } conn_t;
+
+typedef struct {
+    conn_t *conn;
+    int socket;
+} server_t;
+
 
 void
 ch_init(channel_t *ch) {
@@ -151,15 +102,15 @@ writer(void *arg) {
     while (1) {
         msg = ch_recv(&conn->reply);
 
-        len = write(conn->socket, msg->buf, msg->len);
+        len = write(msg->socket, msg->buf, msg->len);
         if (len < 0) {
             printf("Unable to write to socket\n");
-            close(conn->socket);
+            close(msg->socket);
             return NULL;
         }
         else if (len == 0) {
             printf("Write close EOF\n");
-            close(conn->socket);
+            close(msg->socket);
             return NULL;
         }
 
@@ -169,20 +120,56 @@ writer(void *arg) {
     return NULL;
 }
 
-int
-server(int socket) {
-    char buf[4096];
-    int len;
-    conn_t conn;
+void *
+reader(void *arg) {
     int i;
-    pthread_t tid;
     msg_t *msg;
+    server_t *s;
+    conn_t *conn;
 
     /* setup conn */
-    conn.socket = socket;
+    s = (server_t *)arg;
+    conn = s->conn;
+
+    while(1) {
+        msg = (msg_t *)malloc(sizeof(msg_t));
+
+        msg->socket = s->socket;
+        msg->len = read(s->socket, msg->buf, sizeof(msg->buf));
+        if (msg->len < 0) {
+            printf("Unable to read from socket\n");
+            close(s->socket);
+            goto out;
+        }
+        else if (msg->len == 0) {
+            printf("Close: EOF\n");
+            close(s->socket);
+            goto out;
+        }
+
+        /* send */
+        ch_send(&conn->workers, msg); 
+    }
+
+out:
+    free(arg);
+    return NULL;
+}
+
+int main(int argc, char *argv[]) {
+  struct sockaddr_un addr;
+  int fd, client, pid;
+    pthread_t tid;
+    conn_t conn;
+    int i;
+    server_t *s;
+
+  if (argc > 1) {
+    socket_path=argv[1];
+  }
+  
     ch_init(&conn.workers);
     ch_init(&conn.reply);
-
     /* spawn */
     pthread_create(&tid, NULL, writer, &conn);
 
@@ -192,22 +179,40 @@ server(int socket) {
         pthread_create(&tid, NULL, worker, &conn);
     }
 
-    while(1) {
-        msg = (msg_t *)malloc(sizeof(msg_t));
+  if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    perror("socket error");
+    exit(-1);
+  }
 
-        msg->len = read(socket, msg->buf, sizeof(msg->buf));
-        if (msg->len < 0) {
-            printf("Unable to read from socket\n");
-            close(socket);
-            return -1;
-        }
-        else if (msg->len == 0) {
-            printf("Close: EOF\n");
-            close(socket);
-            return 0;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
+
+  unlink(socket_path);
+
+  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+    perror("bind error");
+    exit(-1);
+  }
+
+  if (listen(fd, 10) == -1) {
+    perror("listen error");
+    exit(-1);
+  }
+
+    while (1) {
+        if ( (client = accept(fd, NULL, NULL)) == -1) {
+          perror("accept error");
+          continue;
         }
 
-        /* send */
-        ch_send(&conn.workers, msg); 
-    }
+        s = (server_t *)malloc(sizeof (server_t));
+        s->conn = &conn;
+        s->socket = client;
+
+        pthread_create(&tid, NULL, reader, s);
+
+      }
+
+  return 0;
 }
