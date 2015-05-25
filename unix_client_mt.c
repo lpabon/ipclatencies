@@ -7,18 +7,49 @@
 #include <pthread.h>
 #include "tm.h"
 
+#define MESSAGES 100000
 char *socket_path = "go.sock";
+
+void *
+reader(void *arg) {
+
+    int64_t d = 0;
+    tm_ty ts, te;
+    tm_ty *send_ts;
+    int i;
+    int fd = *(int *)arg;
+    char buf[4096];
+    int len;
+
+    send_ts = (tm_ty *)buf;
+    for (i=0; i<MESSAGES; i++) {
+        len = read(fd, buf, sizeof(buf));
+        if (len < 1) {
+            printf("unable to read\n");
+            exit(0);
+        }
+        TM_NOW(te);
+
+        ts.tv_nsec = send_ts->tv_nsec;
+        ts.tv_sec = send_ts->tv_sec;
+        d += TM_DURATION_NSEC(te, ts);
+        }
+
+    printf("Latency: %lld ns\n", d/((int64_t)MESSAGES));
+    return NULL;
+}
 
 int main(int argc, char *argv[]) {
   struct sockaddr_un addr;
   int fd,rc;
   char buf[4096];
   int len;
-  int64_t d = 0;
-  tm_ty ts, te;
+  tm_ty *send_ts;
+    pthread_t tid;
   int i, count;
 
   if (argc > 1) socket_path=argv[1];
+
 
   if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     perror("socket error");
@@ -34,25 +65,22 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
-  count = 100000;
-  for (i=0; i<count; i++) {
-      TM_NOW(ts);
-      len = write(fd, buf, sizeof(buf));
-      if (len < 1) {
-          printf("unable to write\n");
-          exit(0);
-      }
+    // start server
+    pthread_create(&tid, NULL, reader, (void *)&fd);
 
-      len = read(fd, buf, sizeof(buf));
-      if (len < 1) {
-        printf("unable to read\n");
-        exit(0);
-      }
-      TM_NOW(te);
-      d += TM_DURATION_NSEC(te, ts);
-  }
-  printf("Latency: %lld ns\n", d/((int64_t)count));
+    count = MESSAGES;
+    send_ts = (tm_ty *)buf;
+    for (i=0; i<count; i++) {
+        //TM_NOW(ts);
+        clock_gettime(CLOCK_MONOTONIC, send_ts);
+        len = write(fd, buf, sizeof(buf));
+        if (len < 1) {
+            printf("unable to write\n");
+            exit(0);
+        }
+    }
 
+    pthread_join(tid, NULL);
 
   return 0;
 }
