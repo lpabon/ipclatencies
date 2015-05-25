@@ -96,7 +96,7 @@ worker(void *arg) {
         T("s:%d got message", msg->socket);
 
         /* Work */
-        usleep(1);
+        usleep(100);
 
         /* Send */
         T("s:%d @@send", msg->socket);

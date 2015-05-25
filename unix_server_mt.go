@@ -41,7 +41,7 @@ func writer(reply chan *Message) {
 func worker(workers chan *Message, reply chan *Message) {
 
 	for msg := range workers {
-		time.Sleep(time.Microsecond)
+		time.Sleep(time.Microsecond*100)
 		reply <- msg
 	}
 
@@ -51,12 +51,10 @@ func reader(c net.Conn,
 	workers chan *Message) {
 	defer c.Close()
 
-	buf := make([]byte, 4096)
-
 	for {
 		msg := &Message{
 			conn: c,
-			buf:  buf,
+			buf:  make([]byte, 4096),
 		}
 
 		//c.SetDeadline(time.Now().Add(time.Second * 10))
