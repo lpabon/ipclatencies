@@ -8,10 +8,10 @@ hwserver: Makefile hwserver.c tm.h
 	$(GCC) -O2 -o hwserver hwserver.c -lzmq
 
 mcus: Makefile unix_server_mt.c tm.h
-	$(GCC) -O2 -o mcus unix_server_mt.c
+	$(GCC) -O2 -pthread -o mcus unix_server_mt.c
 
 mcuc: Makefile unix_client_mt.c tm.h
-	$(GCC) -O2 -o mcuc unix_client_mt.c
+	$(GCC) -O2 -pthread -o mcuc unix_client_mt.c
 
 cus: Makefile unix_server.c tm.h
 	$(GCC) -O2 -o cus unix_server.c
