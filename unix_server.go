@@ -30,17 +30,19 @@ func echoServer(c net.Conn) {
 	for {
 
 		//c.SetDeadline(time.Now().Add(time.Second * 10))
-		_, err := c.Read(buf)
+		l, err := c.Read(buf)
 		if err != nil {
 			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
+		fmt.Printf("<--%d", l)
 
-		_, err = c.Write(buf)
+		_, err = c.Write(buf[:l])
 		if err != nil {
 			fmt.Printf("W:Closed: %s\n", err.Error())
 			return
 		}
+		fmt.Print(">")
 	}
 }
 

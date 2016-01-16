@@ -1,4 +1,4 @@
-// 
+//
 //  Asynchronous client-server
 //  While this example runs in a single process, that is to make
 //  it easier to start and stop the example. Each task has its own
@@ -93,7 +93,7 @@ func server_task() {
 	backend.Bind("ipc://backend.ipc")
 	defer backend.Close()
 
-	//  Launch pool of worker threads, precise number is not critical	
+	//  Launch pool of worker threads, precise number is not critical
 	for i := 0; i < 5; i++ {
 		go server_worker()
 	}

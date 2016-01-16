@@ -41,7 +41,7 @@ func writer(reply chan *Message) {
 func worker(workers chan *Message, reply chan *Message) {
 
 	for msg := range workers {
-		time.Sleep(time.Microsecond*100)
+		time.Sleep(time.Microsecond * 100)
 		reply <- msg
 	}
 

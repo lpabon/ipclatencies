@@ -29,7 +29,7 @@ func client(c net.Conn, wg *sync.WaitGroup, id int) {
 
 	defer c.Close()
 
-	buf := make([]byte, 8)
+	buf := make([]byte, 4096)
 	var td utils.TimeDuration
 	prev := td.Copy()
 
