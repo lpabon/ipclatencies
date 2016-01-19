@@ -25,7 +25,7 @@ import (
 
 func echoServer(c net.Conn) {
 	defer c.Close()
-	buf := make([]byte, 8*4096)
+	buf := make([]byte, 4096)
 
 	for {
 
@@ -35,14 +35,14 @@ func echoServer(c net.Conn) {
 			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
-		fmt.Printf("<--%d", l)
 
-		_, err = c.Write(buf[:l])
-		if err != nil {
-			fmt.Printf("W:Closed: %s\n", err.Error())
-			return
-		}
-		fmt.Print(">")
+		go func() {
+			_, err = c.Write(buf[:l])
+			if err != nil {
+				fmt.Printf("W:Closed: %s\n", err.Error())
+				return
+			}
+		}()
 	}
 }
 

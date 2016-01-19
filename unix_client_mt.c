@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include "tm.h"
 
-#define MESSAGES 100
+#define MESSAGES 10000
 char *socket_path = "go.sock";
 
 void *reader(void *arg)
@@ -24,7 +24,6 @@ void *reader(void *arg)
 	send_ts = (tm_ty *) buf;
 	for (i = 0; i < MESSAGES; i++) {
 		len = read(fd, buf, sizeof(buf));
-        printf("%d <-- \n", i);
 		if (len < 1) {
 			printf("unable to read\n");
 			exit(0);
@@ -74,7 +73,6 @@ int main(int argc, char *argv[])
 
 	send_ts = (tm_ty *) buf;
 	for (i = 0; i < MESSAGES; i++) {
-        printf("%d --> \n", i);
 		clock_gettime(CLOCK_MONOTONIC, send_ts);
 		len = write(fd, buf, sizeof(buf));
 		if (len < 1) {
