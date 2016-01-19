@@ -26,7 +26,7 @@ while True:
     try:
         # Receive the data in small chunks and retransmit it
         while True:
-            data = connection.recv(512)
+            data = connection.recv(4096)
             if data:
                 connection.sendall(data)
             else:

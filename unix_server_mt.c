@@ -20,216 +20,213 @@ char *socket_path = "go.sock";
 #endif
 
 typedef struct {
-    int socket;
-    char buf[4096];
-    int len;
+	int socket;
+	char buf[4096];
+	int len;
 } msg_t;
 
-
 typedef struct {
-    pthread_cond_t send_c;
-    pthread_cond_t recv_c;
-    pthread_mutex_t m;
-    msg_t *msg;
+	pthread_cond_t send_c;
+	pthread_cond_t recv_c;
+	pthread_mutex_t m;
+	msg_t *msg;
 } channel_t;
 
 typedef struct {
-    channel_t workers;
-    channel_t reply;
+	channel_t workers;
+	channel_t reply;
 } conn_t;
 
 typedef struct {
-    conn_t *conn;
-    int socket;
+	conn_t *conn;
+	int socket;
 } server_t;
 
-
-void
-ch_init(channel_t *ch) {
-    ch->msg = NULL;
-    pthread_mutex_init(&ch->m, NULL);
-    pthread_cond_init(&ch->send_c, NULL);
-    pthread_cond_init(&ch->recv_c, NULL);
+void ch_init(channel_t * ch)
+{
+	ch->msg = NULL;
+	pthread_mutex_init(&ch->m, NULL);
+	pthread_cond_init(&ch->send_c, NULL);
+	pthread_cond_init(&ch->recv_c, NULL);
 }
 
-void
-ch_send(channel_t *ch, msg_t *msg) {
+void ch_send(channel_t * ch, msg_t * msg)
+{
 
-    pthread_mutex_lock(&ch->m);
-    while (NULL != ch->msg) {
-        pthread_cond_wait(&ch->send_c, &ch->m);
-    }
+	pthread_mutex_lock(&ch->m);
+	while (NULL != ch->msg) {
+		pthread_cond_wait(&ch->send_c, &ch->m);
+	}
 
-    ch->msg = msg;
+	ch->msg = msg;
 
-    pthread_cond_signal(&ch->recv_c);
-    pthread_mutex_unlock(&ch->m);
+	pthread_cond_signal(&ch->recv_c);
+	pthread_mutex_unlock(&ch->m);
 }
 
-msg_t *
-ch_recv(channel_t *ch) {
+msg_t *ch_recv(channel_t * ch)
+{
 
-    msg_t *msg;
+	msg_t *msg;
 
-    pthread_mutex_lock(&ch->m);
-    while (NULL == ch->msg) {
-        pthread_cond_wait(&ch->recv_c, &ch->m);
-    }
+	pthread_mutex_lock(&ch->m);
+	while (NULL == ch->msg) {
+		pthread_cond_wait(&ch->recv_c, &ch->m);
+	}
 
-    msg = ch->msg;
-    ch->msg = NULL;
+	msg = ch->msg;
+	ch->msg = NULL;
 
-    pthread_cond_signal(&ch->send_c);
-    pthread_mutex_unlock(&ch->m);
+	pthread_cond_signal(&ch->send_c);
+	pthread_mutex_unlock(&ch->m);
 
-    return msg;
+	return msg;
 }
 
-void *
-worker(void *arg) {
-    conn_t *conn = (conn_t *)arg;
-    msg_t *msg;
+void *worker(void *arg)
+{
+	conn_t *conn = (conn_t *) arg;
+	msg_t *msg;
 
-    while (1) {
-        /* get */
-        msg = ch_recv(&conn->workers); 
-        T("s:%d got message", msg->socket);
+	while (1) {
+		/* get */
+		msg = ch_recv(&conn->workers);
+		T("s:%d got message", msg->socket);
 
-        /* Work */
-        usleep(10);
+		/* Work */
+		usleep(10);
 
-        /* Send */
-        T("s:%d @@send", msg->socket);
-        ch_send(&conn->reply, msg);
-        T("s:%d sent++", msg->socket);
-    }
+		/* Send */
+		T("s:%d @@send", msg->socket);
+		ch_send(&conn->reply, msg);
+		T("s:%d sent++", msg->socket);
+	}
 
-    return NULL;
+	return NULL;
 }
 
-void *
-writer(void *arg) {
-    conn_t *conn = (conn_t *)arg;
-    msg_t *msg;
-    int len;
+void *writer(void *arg)
+{
+	conn_t *conn = (conn_t *) arg;
+	msg_t *msg;
+	int len;
 
-    while (1) {
-        msg = ch_recv(&conn->reply);
-        T("msg ready to be sent");
+	while (1) {
+		msg = ch_recv(&conn->reply);
+		T("msg ready to be sent");
 
-        len = write(msg->socket, msg->buf, msg->len);
-        if (len < 0) {
-            printf("Unable to write to socket\n");
-            close(msg->socket);
-            return NULL;
-        }
-        else if (len == 0) {
-            printf("Write close EOF\n");
-            close(msg->socket);
-            return NULL;
-        }
+		len = write(msg->socket, msg->buf, msg->len);
+		if (len < 0) {
+			printf("Unable to write to socket\n");
+			close(msg->socket);
+			return NULL;
+		} else if (len == 0) {
+			printf("Write close EOF\n");
+			close(msg->socket);
+			return NULL;
+		}
 
-        free(msg);
-    }
+		free(msg);
+	}
 
-    return NULL;
+	return NULL;
 }
 
-void *
-reader(void *arg) {
-    int i;
-    msg_t *msg;
-    server_t *s;
-    conn_t *conn;
+void *reader(void *arg)
+{
+	int i;
+	msg_t *msg;
+	server_t *s;
+	conn_t *conn;
 
-    /* setup conn */
-    s = (server_t *)arg;
-    conn = s->conn;
+	/* setup conn */
+	s = (server_t *) arg;
+	conn = s->conn;
 
-    T("start");
-    while(1) {
-        msg = (msg_t *)malloc(sizeof(msg_t));
+	T("start");
+	while (1) {
+		msg = (msg_t *) malloc(sizeof(msg_t));
 
-        msg->socket = s->socket;
-        msg->len = read(s->socket, msg->buf, sizeof(msg->buf));
-        if (msg->len < 0) {
-            printf("Unable to read from socket\n");
-            close(s->socket);
-            goto out;
-        }
-        else if (msg->len == 0) {
-            printf("Close: EOF\n");
-            close(s->socket);
-            goto out;
-        }
+		msg->socket = s->socket;
+		msg->len = read(s->socket, msg->buf, sizeof(msg->buf));
+		if (msg->len < 0) {
+			printf("Unable to read from socket\n");
+			close(s->socket);
+			goto out;
+		} else if (msg->len == 0) {
+			printf("Close: EOF\n");
+			close(s->socket);
+			goto out;
+		}
 
-        T("s:%d send", s->socket);
-        /* send */
-        ch_send(&conn->workers, msg); 
-        T("s:%d back", s->socket);
-    }
+		T("s:%d send", s->socket);
+		/* send */
+		ch_send(&conn->workers, msg);
+		T("s:%d back", s->socket);
+	}
 
-out:
-    free(arg);
-    return NULL;
+ out:
+	free(arg);
+	return NULL;
 }
 
-int main(int argc, char *argv[]) {
-  struct sockaddr_un addr;
-  int fd, client, pid;
-    pthread_t tid;
-    conn_t conn;
-    int i;
-    server_t *s;
+int main(int argc, char *argv[])
+{
+	struct sockaddr_un addr;
+	int fd, client, pid;
+	pthread_t tid;
+	conn_t conn;
+	int i;
+	server_t *s;
 
-  if (argc > 1) {
-    socket_path=argv[1];
-  }
-  
-    ch_init(&conn.workers);
-    ch_init(&conn.reply);
-    /* spawn */
-    pthread_create(&tid, NULL, writer, &conn);
+	if (argc > 1) {
+		socket_path = argv[1];
+	}
 
-    // spawn workers
-    for (i=0; i<32; i++) {
-        pthread_create(&tid, NULL, worker, &conn);
-    }
+	ch_init(&conn.workers);
+	ch_init(&conn.reply);
+	/* spawn */
+	pthread_create(&tid, NULL, writer, &conn);
 
-  if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    perror("socket error");
-    exit(-1);
-  }
+	// spawn workers
+	for (i = 0; i < 32; i++) {
+		pthread_create(&tid, NULL, worker, &conn);
+	}
 
-  memset(&addr, 0, sizeof(addr));
-  addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket error");
+		exit(-1);
+	}
 
-  unlink(socket_path);
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
 
-  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-    perror("bind error");
-    exit(-1);
-  }
+	unlink(socket_path);
 
-  if (listen(fd, 10) == -1) {
-    perror("listen error");
-    exit(-1);
-  }
+	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+		perror("bind error");
+		exit(-1);
+	}
 
-    while (1) {
-        if ( (client = accept(fd, NULL, NULL)) == -1) {
-          perror("accept error");
-          continue;
-        }
+	if (listen(fd, 10) == -1) {
+		perror("listen error");
+		exit(-1);
+	}
 
-        s = (server_t *)malloc(sizeof (server_t));
-        s->conn = &conn;
-        s->socket = client;
+	while (1) {
+		if ((client = accept(fd, NULL, NULL)) == -1) {
+			perror("accept error");
+			continue;
+		}
 
-        pthread_create(&tid, NULL, reader, s);
+		s = (server_t *) malloc(sizeof(server_t));
+		s->conn = &conn;
+		s->socket = client;
 
-      }
+		pthread_create(&tid, NULL, reader, s);
 
-  return 0;
+	}
+
+	return 0;
 }

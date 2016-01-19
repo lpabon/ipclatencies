@@ -79,10 +79,10 @@ int main(int argc, char *argv[])
 			printf("unable to write\n");
 			exit(0);
 		}
-        usleep(100);
+		usleep(1000);
 	}
 
-    printf("Done\n");
+	printf("Done\n");
 
 	pthread_join(tid, NULL);
 

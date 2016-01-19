@@ -20,7 +20,7 @@ import (
 	"github.com/lpabon/godbc"
 	"net"
 	"os"
-	"runtime"
+	//"runtime"
 	"time"
 )
 
@@ -71,7 +71,7 @@ func reader(c net.Conn,
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	//runtime.GOMAXPROCS(runtime.NumCPU())
 	os.Remove("go.sock")
 	l, err := net.Listen("unix", "go.sock")
 	godbc.Check(err == nil)
@@ -79,19 +79,18 @@ func main() {
 	defer l.Close()
 	defer os.Remove("go.sock")
 
-	workers := make(chan *Message, 4096)
-	reply := make(chan *Message, 4096)
+	workers := make(chan *Message, 32)
+	reply := make(chan *Message, 32)
 
-	go writer(reply)
 	for i := 0; i < 32; i++ {
 		go worker(workers, reply)
+		go writer(reply)
 	}
 
 	for {
 		fd, err := l.Accept()
 		if err == nil {
 			go reader(fd, workers)
-			//go echoServer(fd)
 		} else {
 			fmt.Printf("Error: %s\n", err.Error())
 			break
