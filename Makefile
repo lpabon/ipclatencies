@@ -1,6 +1,6 @@
 LIBUVLIBS=$(shell pkg-config --libs libuv)
 GCC = gcc
-all: lcuc mcus mcuc cus cuc
+all: mcus mcuc cus cuc cuc_iov
 
 mcus: Makefile unix_server_mt.c tm.h
 	$(GCC) -O2 -pthread -o mcus unix_server_mt.c
@@ -11,14 +11,17 @@ mcuc: Makefile unix_client_mt.c tm.h
 cus: Makefile unix_server.c tm.h
 	$(GCC) -O2 -o cus unix_server.c
 
+cuc_iov: Makefile unix_client_iov.c tm.h
+	$(GCC) -O2 -o cuc_iov unix_client.c
+
 cuc: Makefile unix_client.c tm.h
 	$(GCC) -O2 -o cuc unix_client.c
 
-lcuc: Makefile uv_client.c tm.h
+uvuc: Makefile uv_client.c tm.h
 	$(GCC) -O0 -g -o uvuc uv_client.c $(LIBUVLIBS) 
 
 
 clean:
-	rm -f mcus mcuc cus cuc
+	rm -f uvuc mcus mcuc cus cuc
 
 .PHONY: clean
