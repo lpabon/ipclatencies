@@ -22,6 +22,7 @@ msgpack_sbuffer *msgpack_tutorial(void)
 	msgpack_packer pk;
 	msgpack_packer_init(&pk, sbuf, msgpack_sbuffer_write);
 
+#if 0
 	/*
 	 * {
 	 *   "Id" : uint32,
@@ -52,14 +53,22 @@ msgpack_sbuffer *msgpack_tutorial(void)
 	msgpack_pack_str_body(&pk, "Path", 4);
 	msgpack_pack_str(&pk, strlen("/usr/home/here"));
 	msgpack_pack_str_body(&pk, "/usr/home/here", strlen("/usr/home/here"));
+#endif
 
-	/*
-	   msgpack_pack_array(&pk, 3);
-	   msgpack_pack_int(&pk, 1);
-	   msgpack_pack_true(&pk);
-	   msgpack_pack_str(&pk, 7);
-	   msgpack_pack_str_body(&pk, "example", 7);
-	 */
+    msgpack_pack_array(&pk, 4);
+	msgpack_pack_uint32(&pk, 32);
+	msgpack_pack_uint64(&pk, 123456);
+	msgpack_pack_uint64(&pk, 789);
+	msgpack_pack_str(&pk, strlen("/usr/home/here"));
+	msgpack_pack_str_body(&pk, "/usr/home/here", strlen("/usr/home/here"));
+
+    /*
+	msgpack_pack_array(&pk, 3);
+	msgpack_pack_int(&pk, 1);
+	msgpack_pack_true(&pk);
+	msgpack_pack_str(&pk, 7);
+	msgpack_pack_str_body(&pk, "example", 7);
+    */
 
 	/* deserialize the buffer into msgpack_object instance. */
 	/* deserialized object is valid during the msgpack_zone instance alive. */
@@ -114,7 +123,7 @@ int main(int argc, char *argv[])
 	// Create a pack
 	sbuf = msgpack_tutorial();
 
-	count = 10000;
+	count = 1;
 	for (i = 0; i < count; i++) {
 		TM_NOW(ts);
 		len = write(fd, sbuf->data, sbuf->size);

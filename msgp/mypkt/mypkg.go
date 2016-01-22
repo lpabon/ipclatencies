@@ -15,6 +15,10 @@
 
 package mypkt
 
+import (
+	"github.com/tinylib/msgp/msgp"
+)
+
 type MyMsg struct {
 	Values []interface{}
 }
@@ -24,4 +28,68 @@ type MyPkt struct {
 	Block   uint64
 	NBlocks uint64
 	Path    string
+}
+
+func (z *MyPkt) ArrayMsgsize() (s int) {
+	s = 1 + 1 + msgp.Uint32Size + 1 + msgp.Uint64Size + 1 + msgp.Uint64Size + 1 + msgp.StringPrefixSize + len(z.Path)
+	return
+}
+
+func (z *MyPkt) MarshalArrayMsg() (o []byte, err error) {
+	o = msgp.Require(nil, z.ArrayMsgsize())
+
+	// array header, size 4
+	o = msgp.AppendArrayHeader(o, 4)
+
+	// "Id"
+	o = msgp.AppendUint32(o, z.Id)
+	// "Block"
+	o = msgp.AppendUint64(o, z.Block)
+	// "NBlocks"
+	o = msgp.AppendUint64(o, z.NBlocks)
+	// "Path"
+	o = msgp.AppendString(o, z.Path)
+
+	return
+}
+
+func (z *MyPkt) UnmarshalArrayMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var i, isz uint32
+	isz, bts, err = msgp.ReadArrayHeaderBytes(bts)
+	if err != nil {
+		return
+	}
+	for i = 0; i < isz; i++ {
+		switch i {
+		case 0:
+			z.Id, bts, err = msgp.ReadUint32Bytes(bts)
+			if err != nil {
+				return
+			}
+		case 1:
+			z.Block, bts, err = msgp.ReadUint64Bytes(bts)
+			if err != nil {
+				return
+			}
+		case 2:
+			z.NBlocks, bts, err = msgp.ReadUint64Bytes(bts)
+			if err != nil {
+				return
+			}
+		case 3:
+			z.Path, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				return
+			}
+		}
+	}
+	o = bts
+	return
 }

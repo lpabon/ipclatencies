@@ -37,8 +37,8 @@ func echoServer(c net.Conn) {
 			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
-		rpkt.UnmarshalMsg(buf[:l])
-		//fmt.Print(rpkt)
+		rpkt.UnmarshalArrayMsg(buf[:l])
+		fmt.Print(rpkt)
 
 		pkt := mypkt.MyPkt{}
 		pkt.Id = 1234
@@ -46,7 +46,7 @@ func echoServer(c net.Conn) {
 		pkt.NBlocks = 700
 		pkt.Path = "/usr/home/path"
 		//b := make([]byte, pkt.Msgsize())
-		b, _ := pkt.MarshalMsg(nil)
+		b, _ := pkt.MarshalArrayMsg()
 
 		go func() {
 			_, err = c.Write(b)
