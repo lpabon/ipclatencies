@@ -31,20 +31,24 @@ func echoServer(c net.Conn) {
 	for {
 
 		//c.SetDeadline(time.Now().Add(time.Second * 10))
-		rpkt := mypkt.MyPkt{}
+		pkt := mypkt.MyPkt{}
 		l, err := c.Read(buf)
 		if err != nil {
 			fmt.Printf("R:Closed: %s\n", err.Error())
 			return
 		}
-		rpkt.UnmarshalArrayMsg(buf[:l])
-		fmt.Print(rpkt)
+		pkt.UnmarshalArrayMsg(buf[:l])
+		pkt.Id++
+		pkt.Block += 2
+		/*
+			fmt.Print(rpkt)
 
-		pkt := mypkt.MyPkt{}
-		pkt.Id = 1234
-		pkt.Block = 1234567890
-		pkt.NBlocks = 700
-		pkt.Path = "/usr/home/path"
+			pkt := mypkt.MyPkt{}
+			pkt.Id = 1234
+			pkt.Block = 1234567890
+			pkt.NBlocks = 700
+			pkt.Path = "/usr/home/path"
+		*/
 		//b := make([]byte, pkt.Msgsize())
 		b, _ := pkt.MarshalArrayMsg()
 

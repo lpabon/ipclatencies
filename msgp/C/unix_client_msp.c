@@ -12,6 +12,18 @@
 
 char *socket_path = "/tmp/go.sock";
 
+typedef struct {
+    uint32_t id;
+    uint64_t block;
+    uint64_t nblocks;
+    char *path;
+} pkt_t;
+
+void
+pkt_free(pkt_t *p) {
+    free(p->path);
+}
+
 msgpack_sbuffer *msgpack_tutorial(void)
 {
 	/* msgpack::sbuffer is a simple buffer implementation. */
@@ -56,7 +68,7 @@ msgpack_sbuffer *msgpack_tutorial(void)
 #endif
 
     msgpack_pack_array(&pk, 4);
-	msgpack_pack_uint32(&pk, 32);
+	msgpack_pack_uint32(&pk, 0);
 	msgpack_pack_uint64(&pk, 123456);
 	msgpack_pack_uint64(&pk, 789);
 	msgpack_pack_str(&pk, strlen("/usr/home/here"));
@@ -85,6 +97,72 @@ msgpack_sbuffer *msgpack_tutorial(void)
 	msgpack_zone_destroy(&mempool);
 
 	return sbuf;
+}
+
+msgpack_sbuffer *
+marshal(pkt_t* p) {
+
+	/* msgpack::sbuffer is a simple buffer implementation. */
+	msgpack_sbuffer *sbuf;
+	sbuf = msgpack_sbuffer_new();
+
+	/* serialize values into the buffer using msgpack_sbuffer_write callback function. */
+	msgpack_packer pk;
+	msgpack_packer_init(&pk, sbuf, msgpack_sbuffer_write);
+
+    msgpack_pack_array(&pk, 4);
+
+	msgpack_pack_uint32(&pk, p->id);
+	msgpack_pack_uint64(&pk, p->block);
+	msgpack_pack_uint64(&pk, p->nblocks);
+
+	msgpack_pack_str(&pk, strlen(p->path));
+	msgpack_pack_str_body(&pk, p->path, strlen(p->path));
+
+    return sbuf;
+}
+
+void
+unmarshal(pkt_t* p, char *buf, size_t len) {
+    int i;
+	msgpack_object deserialized;
+	msgpack_zone mempool;
+
+	msgpack_zone_init(&mempool, 2048);
+
+	msgpack_unpack(buf, len, NULL, &mempool, &deserialized);
+    /*
+    msgpack_object_print(stdout, deserialized);
+    puts("");
+    */
+
+    if (deserialized.type == MSGPACK_OBJECT_ARRAY) {
+
+        for (i = 0; i < deserialized.via.array.size; i++) {
+            switch(i) {
+                case 0:
+                    p->id = deserialized.via.array.ptr[i].via.u64;
+                    break;
+
+                case 1:
+                    p->block = deserialized.via.array.ptr[i].via.u64;
+                    break;
+
+                case 2:
+                    p->nblocks = deserialized.via.array.ptr[i].via.u64;
+                    break;
+
+                case 3:
+                    if (p->path != NULL) {
+                        free(p->path);
+                    }
+                    p->path = strndup(deserialized.via.array.ptr[i].via.str.ptr, 
+                            deserialized.via.array.ptr[i].via.str.size);
+                    break;
+            }
+        }
+    }
+	msgpack_zone_destroy(&mempool);
 }
 
 int main(int argc, char *argv[])
@@ -121,10 +199,21 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 	// Create a pack
-	sbuf = msgpack_tutorial();
+	//sbuf = msgpack_tutorial();
+    pkt_t p;
+    p.id = 0;
+    p.block = 0;
+    p.nblocks = 1;
+    p.path = strdup("/hello");
+    
 
-	count = 1;
+	count = 1000000;
 	for (i = 0; i < count; i++) {
+
+        /*
+         * Send
+         */
+        sbuf = marshal(&p);
 		TM_NOW(ts);
 		len = write(fd, sbuf->data, sbuf->size);
 		if (len < 1) {
@@ -132,8 +221,12 @@ int main(int argc, char *argv[])
 			exit(0);
 		}
 		TM_NOW(wte);
+        msgpack_sbuffer_destroy(sbuf);
 		wd += TM_DURATION_NSEC(wte, ts);
 
+        /*
+         * Recv
+         */
 		len = read(fd, buf, sizeof(buf));
 		if (len < 1) {
 			printf("unable to read\n");
@@ -144,26 +237,17 @@ int main(int argc, char *argv[])
 		rd += TM_DURATION_NSEC(te, wte);
 
 		TM_NOW(ms);
-		msgpack_zone mempool;
-		msgpack_zone_init(&mempool, 2048);
-
-		msgpack_object deserialized;
-		msgpack_unpack(buf, len, NULL, &mempool, &deserialized);
+        unmarshal(&p, buf, len);
 		TM_NOW(me);
+
 		md += TM_DURATION_NSEC(ms, me);
-
-		/* print the deserialized object. */
-		msgpack_object_print(stdout, deserialized);
-		puts("");
-
-		msgpack_zone_destroy(&mempool);
 	}
 	printf("Latency: %lld ns\n", d / ((int64_t) count));
 	printf("R Latency: %lld ns\n", rd / ((int64_t) count));
 	printf("W Latency: %lld ns\n", wd / ((int64_t) count));
 	printf("MPCK: %lld ns\n", md / ((int64_t) count));
+    pkt_free(&p);
 
-	msgpack_sbuffer_destroy(sbuf);
 
 	return 0;
 }
